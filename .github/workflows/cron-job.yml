@@ -1,0 +1,28 @@
+name: 'Daily Ticket Report'
+
+on:
+  schedule:
+    # Runs every day at 08:00 UTC
+    - cron: '0 8 * * *'
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run report script
+        run: node app.js
+        env:
+          TICKETCO_API_KEY: ${{ secrets.TICKETCO_API_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
