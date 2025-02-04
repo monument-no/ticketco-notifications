@@ -24,7 +24,7 @@ const ticketSaleSchema = new mongoose.Schema({
   merchCount: Number,
   glampingCount: Number,
   festivalThursdayCount: Number,
-  festivalOtherCount: Number,
+  festivalFridayToSunday: Number,
 });
 
 const TicketSaleLog = mongoose.model('TicketSaleLog', ticketSaleSchema);
@@ -47,7 +47,7 @@ async function fetchTicketCoData() {
   let merchCount = 0;
   let glampingCount = 0;
   let festivalThursdayCount = 0;
-  let festivalOtherCount = 0;
+  let festivalFridayToSunday = 0;
 
   // We'll also track the same counts, but only for the LAST 24 HOURS
   let dailyHerbalWalkCount = 0;
@@ -57,13 +57,21 @@ async function fetchTicketCoData() {
   let dailyMerchCount = 0;
   let dailyGlampingCount = 0;
   let dailyFestivalThursdayCount = 0;
-  let dailyFestivalOtherCount = 0;
+  let dailyFestivalFridayToSunday = 0;
 
   // Determine the cutoff time for "last 24 hours"
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   let page = 1;
+
+  const thursdayItemTypeIds = [19545460, 19545506];
+  const fridayToSundayItemTypeIds = [
+    20610868, // Regular Festival Ticket (Friday-Sunday)
+    19545505, // Regular Festival Ticket (Friday-Sunday) - Community price
+    // 19545429, // Supporter Festival Ticket (Friday-Sunday)
+    // 19545401, // Weekend Friendly Ticket (Fri-Sun)
+  ];
 
   while (true) {
     const url = new URL(endpoint);
@@ -84,49 +92,50 @@ async function fetchTicketCoData() {
     itemGrosses.forEach((item) => {
       const capacityName = item.capacity_name || '';
       const itemTypeTitle = item.item_type_title || '';
+      const itemTypeId = item.item_type_id;
       const transactionDate = new Date(item.transaction_datestamp);
 
       // ALL TIME counters
       if (capacityName === 'Herbal walk and wild forest tea workshop') {
         herbalWalkCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyHerbalWalkCount++;
+        }
       } else if (capacityName === 'Parking') {
         parkingCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyParkingCount++;
+        }
       } else if (capacityName === 'Sauna') {
         saunaCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailySaunaCount++;
+        }
       } else if (capacityName === 'Transportation: Bus') {
         transportationBusCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyTransportationBusCount++;
+        }
       } else if (capacityName === 'Merch') {
         merchCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyMerchCount++;
+        }
       } else if (capacityName === 'Glamping & Sleeping options') {
         glampingCount++;
-      } else if (capacityName === 'Festival Tickets') {
-        // We look at the item type title to check for Thursday or exclude it
-        if (itemTypeTitle.includes('Thursday')) {
-          festivalThursdayCount++;
-        } else {
-          festivalOtherCount++;
-        }
-      }
-
-      // LAST 24 HOURS counters
-      if (transactionDate >= oneDayAgo) {
-        if (capacityName === 'Herbal walk and wild forest tea workshop') {
-          dailyHerbalWalkCount++;
-        } else if (capacityName === 'Parking') {
-          dailyParkingCount++;
-        } else if (capacityName === 'Sauna') {
-          dailySaunaCount++;
-        } else if (capacityName === 'Transportation: Bus') {
-          dailyTransportationBusCount++;
-        } else if (capacityName === 'Merch') {
-          dailyMerchCount++;
-        } else if (capacityName === 'Glamping & Sleeping options') {
+        if (transactionDate >= oneDayAgo) {
           dailyGlampingCount++;
-        } else if (capacityName === 'Festival Tickets') {
-          if (itemTypeTitle.includes('Thursday')) {
+        }
+      } else if (capacityName === 'Festival Tickets') {
+        if (thursdayItemTypeIds.includes(itemTypeId)) {
+          festivalThursdayCount++;
+          if (transactionDate >= oneDayAgo) {
             dailyFestivalThursdayCount++;
-          } else {
-            dailyFestivalOtherCount++;
+          }
+        } else if (fridayToSundayItemTypeIds.includes(itemTypeId)) {
+          festivalFridayToSunday++;
+          if (transactionDate >= oneDayAgo) {
+            dailyFestivalFridayToSunday++;
           }
         }
       }
@@ -148,7 +157,7 @@ async function fetchTicketCoData() {
     merchCount,
     glampingCount,
     festivalThursdayCount,
-    festivalOtherCount,
+    festivalFridayToSunday,
     // Last 24 hours
     dailyHerbalWalkCount,
     dailyParkingCount,
@@ -157,7 +166,7 @@ async function fetchTicketCoData() {
     dailyMerchCount,
     dailyGlampingCount,
     dailyFestivalThursdayCount,
-    dailyFestivalOtherCount,
+    dailyFestivalFridayToSunday,
   };
 }
 
@@ -166,75 +175,109 @@ async function fetchTicketCoData() {
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendReportToSlack(reportData) {
   const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
-  const {
-    // All-time
-    herbalWalkCount,
-    parkingCount,
-    saunaCount,
-    transportationBusCount,
-    merchCount,
-    glampingCount,
-    festivalThursdayCount,
-    festivalOtherCount,
-    // Last 24 hours
-    dailyHerbalWalkCount,
-    dailyParkingCount,
-    dailySaunaCount,
-    dailyTransportationBusCount,
-    dailyMerchCount,
-    dailyGlampingCount,
-    dailyFestivalThursdayCount,
-    dailyFestivalOtherCount,
-  } = reportData;
+  const slackWebhookUrlFamilyChat = process.env.SLACK_WEBHOOK_URL_FAMILY_CHAT;
+  const isWednesday = new Date().getDay() === 3;
 
-  // Construct your Slack Blocks
+  // Extract values and sort based on total count
+  const sortedItems = [
+    {
+      name: 'Herbal walk & wild forest tea workshop',
+      total: reportData.herbalWalkCount,
+      daily: reportData.dailyHerbalWalkCount,
+    },
+    {
+      name: 'Parking',
+      total: reportData.parkingCount,
+      daily: reportData.dailyParkingCount,
+    },
+    {
+      name: 'Sauna',
+      total: reportData.saunaCount,
+      daily: reportData.dailySaunaCount,
+    },
+    {
+      name: 'Transportation (Bus)',
+      total: reportData.transportationBusCount,
+      daily: reportData.dailyTransportationBusCount,
+    },
+    {
+      name: 'Merch',
+      total: reportData.merchCount,
+      daily: reportData.dailyMerchCount,
+    },
+    {
+      name: 'Glamping & Sleeping',
+      total: reportData.glampingCount,
+      daily: reportData.dailyGlampingCount,
+    },
+    {
+      name: 'Festival Tickets (Thursday)',
+      total: reportData.festivalThursdayCount,
+      daily: reportData.dailyFestivalThursdayCount,
+      capacityName: 700,
+    },
+    {
+      name: 'Festival Tickets (Fri-Sun, etc.)',
+      total: reportData.festivalFridayToSunday,
+      daily: reportData.dailyFestivalFridayToSunday,
+      capacityName: 2500,
+    },
+  ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
+
+  const addCapacity = (item) => {
+    if (item.name === 'Festival Tickets (Thursday)') {
+      return ` / 700`;
+    }
+    if (item.name === 'Festival Tickets (Fri-Sun, etc.)') {
+      return ` / 2500`;
+    }
+
+    return '';
+  };
+
+  const allTimeText = sortedItems
+    .map((item) => `• *${item.name}:* ${item.total}${addCapacity(item)}`)
+    .join('\n');
+  const dailyText = sortedItems
+    .map((item) => `• *${item.name}:* ${item.daily}`)
+    .join('\n');
+
+  const blocksHeader = {
+    type: 'header',
+    text: {
+      type: 'plain_text',
+      text: 'Monument Festival 2025 - Ticket Summary',
+      emoji: true,
+    },
+  };
+
   const blocksPayload = {
     blocks: [
-      // Header or Title
+      blocksHeader,
       {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: 'Monument Festival 2025 - Ticket Summary',
-          emoji: true,
-        },
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*All-Time Totals*\n${allTimeText}` },
       },
-      // Section for All-Time Totals
+      { type: 'divider' },
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*Last 24 Hours*\n${dailyText}` },
+      },
+    ],
+  };
+
+  const blocksPayloadFamilyChat = {
+    blocks: [
+      blocksHeader,
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
           text:
-            `*All-Time Totals*\n` +
-            `• *Herbal walk & wild forest tea workshop:* ${herbalWalkCount}\n` +
-            `• *Parking:* ${parkingCount}\n` +
-            `• *Sauna:* ${saunaCount}\n` +
-            `• *Transportation (Bus):* ${transportationBusCount}\n` +
-            `• *Merch:* ${merchCount}\n` +
-            `• *Glamping & Sleeping:* ${glampingCount}\n` +
-            `• *Festival Tickets (Thursday):* ${festivalThursdayCount}\n` +
-            `• *Festival Tickets (Fri-Sun, etc.):* ${festivalOtherCount}\n`,
-        },
-      },
-      // Divider
-      {
-        type: 'divider',
-      },
-      // Section for Last 24 Hours
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text:
-            `*Last 24 Hours*\n` +
-            `• *Herbal walk & wild forest tea workshop:* ${dailyHerbalWalkCount}\n` +
-            `• *Parking:* ${dailyParkingCount}\n` +
-            `• *Sauna:* ${dailySaunaCount}\n` +
-            `• *Transportation (Bus):* ${dailyTransportationBusCount}\n` +
-            `• *Merch:* ${dailyMerchCount}\n` +
-            `• *Glamping & Sleeping:* ${dailyGlampingCount}\n` +
-            `• *Festival Tickets (Thursday):* ${dailyFestivalThursdayCount}\n` +
-            `• *Festival Tickets (Fri-Sun, etc.):* ${dailyFestivalOtherCount}\n`,
+            `*All-Time Totals*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 2500 \n` +
+            (isWednesday
+              ? 'Want to see more details? Check out the full report in the #ticketsale-notifications channel.'
+              : ''),
         },
       },
     ],
@@ -242,7 +285,8 @@ async function sendReportToSlack(reportData) {
 
   try {
     await axios.post(slackWebhookUrl, blocksPayload);
-    console.log('Report successfully sent to Slack with blocks.');
+    await axios.post(slackWebhookUrlFamilyChat, blocksPayloadFamilyChat);
+    console.log('Report successfully sent to Slack with sorted blocks.');
   } catch (error) {
     console.error('Error sending report to Slack:', error.message);
   }
@@ -259,7 +303,7 @@ async function main() {
   const reportData = await fetchTicketCoData();
 
   // 2. (Optional) Save the all-time totals to MongoDB
-  const logEntry = new TicketSaleLog({
+  /* const logEntry = new TicketSaleLog({
     herbalWalkCount: reportData.herbalWalkCount,
     parkingCount: reportData.parkingCount,
     saunaCount: reportData.saunaCount,
@@ -267,9 +311,9 @@ async function main() {
     merchCount: reportData.merchCount,
     glampingCount: reportData.glampingCount,
     festivalThursdayCount: reportData.festivalThursdayCount,
-    festivalOtherCount: reportData.festivalOtherCount,
+    festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
-  await logEntry.save();
+  await logEntry.save(); */
   console.log('All-time data saved to MongoDB.');
 
   // 3. Send Slack report (with 2 sections: total & last 24 hours)
