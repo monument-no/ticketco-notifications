@@ -303,7 +303,7 @@ async function main() {
   const reportData = await fetchTicketCoData();
 
   // 2. (Optional) Save the all-time totals to MongoDB
-  /* const logEntry = new TicketSaleLog({
+  const logEntry = new TicketSaleLog({
     herbalWalkCount: reportData.herbalWalkCount,
     parkingCount: reportData.parkingCount,
     saunaCount: reportData.saunaCount,
@@ -313,7 +313,7 @@ async function main() {
     festivalThursdayCount: reportData.festivalThursdayCount,
     festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
-  await logEntry.save(); */
+  await logEntry.save();
   console.log('All-time data saved to MongoDB.');
 
   // 3. Send Slack report (with 2 sections: total & last 24 hours)
