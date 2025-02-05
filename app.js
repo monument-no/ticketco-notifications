@@ -46,7 +46,7 @@ async function fetchTicketCoData() {
   let transportationBusCount = 0;
   let merchCount = 0;
   let glampingCount = 0;
-  let festivalSupporterCount = 0;
+  //let festivalSupporterCount = 0;
   let festivalThursdayCount = 0;
   let festivalFridayToSunday = 0;
 
@@ -57,7 +57,7 @@ async function fetchTicketCoData() {
   let dailyTransportationBusCount = 0;
   let dailyMerchCount = 0;
   let dailyGlampingCount = 0;
-  let dailyFestivalSupporterCount = 0;
+  //let dailyFestivalSupporterCount = 0;
   let dailyFestivalThursdayCount = 0;
   let dailyFestivalFridayToSunday = 0;
 
@@ -130,12 +130,12 @@ async function fetchTicketCoData() {
           dailyGlampingCount++;
         }
       } else if (capacityName === 'Festival Tickets') {
-        if (supporterItemTypeId.includes(itemTypeId)) {
+        /* if (supporterItemTypeId.includes(itemTypeId)) {
           festivalSupporterCount++;
           if (transactionDate >= oneDayAgo) {
-            dailyFestivalSupporterCount++;
+            //dailyFestivalSupporterCount++;
           }
-        }
+        } */
         if (thursdayItemTypeIds.includes(itemTypeId)) {
           festivalThursdayCount++;
           if (transactionDate >= oneDayAgo) {
@@ -165,7 +165,7 @@ async function fetchTicketCoData() {
     transportationBusCount,
     merchCount,
     glampingCount,
-    festivalSupporterCount,
+    //festivalSupporterCount,
     festivalThursdayCount,
     festivalFridayToSunday,
     // Last 24 hours
@@ -175,7 +175,7 @@ async function fetchTicketCoData() {
     dailyTransportationBusCount,
     dailyMerchCount,
     dailyGlampingCount,
-    dailyFestivalSupporterCount,
+    //dailyFestivalSupporterCount,
     dailyFestivalThursdayCount,
     dailyFestivalFridayToSunday,
   };
@@ -221,11 +221,11 @@ async function sendReportToSlack(reportData) {
       total: reportData.glampingCount,
       daily: reportData.dailyGlampingCount,
     },
-    {
+    /* {
       name: 'Supporter Festival Ticket (Friday-Sunday)',
       total: reportData.festivalFridayToSunday,
       daily: reportData.dailyFestivalFridayToSunday,
-    },
+    }, */
     {
       name: 'Festival Tickets (Thursday)',
       total: reportData.festivalThursdayCount,
@@ -239,9 +239,9 @@ async function sendReportToSlack(reportData) {
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
 
   const addCapacity = (item) => {
-    if (item.name === 'Supporter Festival Ticket (Friday-Sunday)') {
+    /* if (item.name === 'Supporter Festival Ticket (Friday-Sunday)') {
       return ` / 200`;
-    }
+    } */
     if (item.name === 'Festival Tickets (Thursday)') {
       return ` / 700`;
     }
@@ -290,7 +290,7 @@ async function sendReportToSlack(reportData) {
         text: {
           type: 'mrkdwn',
           text:
-            `*All-Time Totals*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 2500 \n` +
+            `*All-Time Totals*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 1500 \n` +
             (isWednesday
               ? 'Want to see more details? Check out the full report in the #ticketsale-notifications channel.'
               : ''),
