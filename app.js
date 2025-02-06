@@ -187,7 +187,7 @@ async function fetchTicketCoData() {
 async function sendReportToSlack(reportData) {
   const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
   const slackWebhookUrlFamilyChat = process.env.SLACK_WEBHOOK_URL_FAMILY_CHAT;
-  const isWednesday = new Date().getDay() === 3;
+  const isFriday = new Date().getDay() === 3;
 
   // Extract values and sort based on total count
   const sortedItems = [
@@ -290,8 +290,8 @@ async function sendReportToSlack(reportData) {
         text: {
           type: 'mrkdwn',
           text:
-            `*All-Time Totals*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 1500 \n` +
-            (isWednesday
+            `:love_letter: *This weeks ticket sales*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 1500 \n` +
+            (isFriday
               ? 'Want to see more details? Check out the full report in the #ticketsale-notifications channel.'
               : ''),
         },
@@ -301,7 +301,9 @@ async function sendReportToSlack(reportData) {
 
   try {
     await axios.post(slackWebhookUrl, blocksPayload);
-    await axios.post(slackWebhookUrlFamilyChat, blocksPayloadFamilyChat);
+    if (isFriday) {
+      await axios.post(slackWebhookUrlFamilyChat, blocksPayloadFamilyChat);
+    }
     console.log('Report successfully sent to Slack with sorted blocks.');
   } catch (error) {
     console.error('Error sending report to Slack:', error.message);
