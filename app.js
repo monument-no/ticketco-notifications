@@ -187,7 +187,7 @@ async function fetchTicketCoData() {
 async function sendReportToSlack(reportData) {
   const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
   const slackWebhookUrlFamilyChat = process.env.SLACK_WEBHOOK_URL_FAMILY_CHAT;
-  const isFriday = new Date().getDay() === 3;
+  const isFriday = new Date().getDay() === 5;
 
   // Extract values and sort based on total count
   const sortedItems = [
@@ -290,10 +290,8 @@ async function sendReportToSlack(reportData) {
         text: {
           type: 'mrkdwn',
           text:
-            `:love_letter: *This weeks ticket sales*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 1500 \n` +
-            (isFriday
-              ? 'Want to see more details? Check out the full report in the #ticketsale-notifications channel.'
-              : ''),
+            `:love_letter: *This weeks ticket sales report*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 1500 \n` +
+            'Want to see more details? Check out the full report in the #ticketsale-notifications channel.',
         },
       },
     ],
@@ -319,6 +317,7 @@ async function main() {
 
   // 1. Fetch from TicketCo
   const reportData = await fetchTicketCoData();
+  console.log('TicketCo data fetched:', reportData);
 
   // 2. (Optional) Save the all-time totals to MongoDB
   const logEntry = new TicketSaleLog({
