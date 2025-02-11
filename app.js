@@ -195,31 +195,37 @@ async function sendReportToSlack(reportData) {
       name: 'Herbal walk & wild forest tea workshop',
       total: reportData.herbalWalkCount,
       daily: reportData.dailyHerbalWalkCount,
+      capacity: 61,
     },
     {
       name: 'Parking',
       total: reportData.parkingCount,
       daily: reportData.dailyParkingCount,
+      capacity: 500,
     },
     {
       name: 'Sauna',
       total: reportData.saunaCount,
       daily: reportData.dailySaunaCount,
+      capacity: 450,
     },
     {
       name: 'Transportation (Bus)',
       total: reportData.transportationBusCount,
       daily: reportData.dailyTransportationBusCount,
+      capacity: 2000,
     },
     {
       name: 'Merch',
       total: reportData.merchCount,
       daily: reportData.dailyMerchCount,
+      capacity: 1000,
     },
     {
       name: 'Glamping & Sleeping',
       total: reportData.glampingCount,
       daily: reportData.dailyGlampingCount,
+      capacity: 80,
     },
     /* {
       name: 'Supporter Festival Ticket (Friday-Sunday)',
@@ -230,30 +236,24 @@ async function sendReportToSlack(reportData) {
       name: 'Festival Tickets (Thursday)',
       total: reportData.festivalThursdayCount,
       daily: reportData.dailyFestivalThursdayCount,
+      capacity: 700,
     },
     {
       name: 'Festival Tickets (Fri-Sun, etc.)',
       total: reportData.festivalFridayToSunday,
       daily: reportData.dailyFestivalFridayToSunday,
+      capacity: 1500,
     },
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
 
   const addCapacity = (item) => {
-    /* if (item.name === 'Supporter Festival Ticket (Friday-Sunday)') {
-      return ` / 200`;
-    } */
-    if (item.name === 'Festival Tickets (Thursday)') {
-      return ` / 700`;
-    }
-    if (item.name === 'Festival Tickets (Fri-Sun, etc.)') {
-      return ` / 1500`;
-    }
-    return '';
+    return item.capacity ? ` / ${item.capacity}` : '';
   };
 
   const allTimeText = sortedItems
     .map((item) => `• *${item.name}:* ${item.total}${addCapacity(item)}`)
     .join('\n');
+
   const dailyText = sortedItems
     .map((item) => `• *${item.name}:* ${item.daily}`)
     .join('\n');
@@ -290,8 +290,16 @@ async function sendReportToSlack(reportData) {
         text: {
           type: 'mrkdwn',
           text:
-            `:love_letter: *This weeks ticket sales report*\n• *Festival Tickets (Thursday):* ${reportData.festivalThursdayCount} / 700 \n• *Festival Tickets (Fri-Sun, etc.):* ${reportData.festivalFridayToSunday} / 1500 \n` +
-            'Want to see more details? Check out the full report in the #ticketsale-notifications channel.',
+            `:love_letter: *This week's report*:\n` +
+            sortedItems.find(
+              (item) => item.name === 'Festival Tickets (Thursday)'
+            ).total +
+            ' tickets sold for Thursday\n' +
+            sortedItems.find(
+              (item) => item.name === 'Festival Tickets (Fri-Sun, etc.)'
+            ).total +
+            ' tickets sold for Friday to Sunday\n\n' +
+            '\nWant to see more details? Check out the full report in the #ticketsale-notifications channel.',
         },
       },
     ],
