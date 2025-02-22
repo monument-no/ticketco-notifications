@@ -307,9 +307,10 @@ async function sendReportToSlack(reportData) {
 
   try {
     await axios.post(slackWebhookUrl, blocksPayload);
-    if (isFriday) {
+    // Temp removed for now
+    /* if (isFriday) {
       await axios.post(slackWebhookUrlFamilyChat, blocksPayloadFamilyChat);
-    }
+    } */
     console.log('Report successfully sent to Slack with sorted blocks.');
   } catch (error) {
     console.error('Error sending report to Slack:', error.message);
