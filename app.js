@@ -19,6 +19,9 @@ const ticketSaleSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   herbalWalkCount: Number,
   parkingCount: Number,
+  wineTasting: Number,
+  activityIntention: Number,
+  forestDinner: Number,
   saunaCount: Number,
   transportationBusCount: Number,
   merchCount: Number,
@@ -42,6 +45,9 @@ async function fetchTicketCoData() {
   // We'll accumulate results for each capacity (ALL-TIME)
   let herbalWalkCount = 0;
   let parkingCount = 0;
+  let wineTasting = 0;
+  let activityIntention = 0;
+  let forestDinner = 0;
   let saunaCount = 0;
   let transportationBusCount = 0;
   let merchCount = 0;
@@ -53,6 +59,9 @@ async function fetchTicketCoData() {
   // We'll also track the same counts, but only for the LAST 24 HOURS
   let dailyHerbalWalkCount = 0;
   let dailyParkingCount = 0;
+  let dailyWineTasting = 0;
+  let dailyActivityIntention = 0;
+  let dailyForestDinner = 0;
   let dailySaunaCount = 0;
   let dailyTransportationBusCount = 0;
   let dailyMerchCount = 0;
@@ -109,6 +118,23 @@ async function fetchTicketCoData() {
         if (transactionDate >= oneDayAgo) {
           dailyParkingCount++;
         }
+      } else if (capacityName === 'Natural wine tasting') {
+        wineTasting++;
+        if (transactionDate >= oneDayAgo) {
+          dailyWineTasting++;
+        }
+      } else if (
+        capacityName === 'Activity: Start Your Day With Intention (Free)'
+      ) {
+        activityIntention++;
+        if (transactionDate >= oneDayAgo) {
+          dailyActivityIntention++;
+        }
+      } else if (capacityName === 'To Sense: 8-Course Forest Dinner') {
+        forestDinner++;
+        if (transactionDate >= oneDayAgo) {
+          dailyForestDinner++;
+        }
       } else if (capacityName === 'Sauna') {
         saunaCount++;
         if (transactionDate >= oneDayAgo) {
@@ -161,6 +187,9 @@ async function fetchTicketCoData() {
     // All-time
     herbalWalkCount,
     parkingCount,
+    wineTasting,
+    activityIntention,
+    forestDinner,
     saunaCount,
     transportationBusCount,
     merchCount,
@@ -171,6 +200,9 @@ async function fetchTicketCoData() {
     // Last 24 hours
     dailyHerbalWalkCount,
     dailyParkingCount,
+    dailyWineTasting,
+    dailyActivityIntention,
+    dailyForestDinner,
     dailySaunaCount,
     dailyTransportationBusCount,
     dailyMerchCount,
@@ -190,59 +222,73 @@ async function sendReportToSlack(reportData) {
   const isFriday = new Date().getDay() === 5;
 
   // Extract values and sort based on total count
+  // Filter out items with total 0 before sorting and reporting
   const sortedItems = [
     {
       name: 'Herbal walk & wild forest tea workshop',
       total: reportData.herbalWalkCount,
       daily: reportData.dailyHerbalWalkCount,
-      capacity: 61,
+      capacity: Math.max(61, reportData.herbalWalkCount),
     },
     {
       name: 'Parking',
       total: reportData.parkingCount,
       daily: reportData.dailyParkingCount,
-      capacity: 500,
+      capacity: Math.max(500, reportData.parkingCount),
+    },
+    {
+      name: 'Natural wine tasting',
+      total: reportData.wineTasting,
+      daily: reportData.dailyWineTasting,
+      capacity: Math.max(60, reportData.wineTasting),
+    },
+    {
+      name: 'Activity: Start Your Day With Intention (Free)',
+      total: reportData.activityIntention,
+      daily: reportData.dailyActivityIntention,
+      capacity: Math.max(24, reportData.activityIntention),
+    },
+    {
+      name: 'To Sense: 8-Course Forest Dinner',
+      total: reportData.forestDinner,
+      daily: reportData.dailyForestDinner,
+      capacity: Math.max(80, reportData.forestDinner),
     },
     {
       name: 'Sauna',
       total: reportData.saunaCount,
       daily: reportData.dailySaunaCount,
-      capacity: 450,
+      capacity: Math.max(450, reportData.saunaCount),
     },
     {
       name: 'Transportation (Bus)',
       total: reportData.transportationBusCount,
       daily: reportData.dailyTransportationBusCount,
-      capacity: 2000,
+      capacity: Math.max(2000, reportData.transportationBusCount),
     },
     {
       name: 'Merch',
       total: reportData.merchCount,
       daily: reportData.dailyMerchCount,
-      capacity: 1000,
+      capacity: Math.max(1000, reportData.merchCount),
     },
     {
       name: 'Glamping & Sleeping',
       total: reportData.glampingCount,
       daily: reportData.dailyGlampingCount,
-      capacity: 80,
+      capacity: Math.max(80, reportData.glampingCount),
     },
-    /* {
-      name: 'Supporter Festival Ticket (Friday-Sunday)',
-      total: reportData.festivalFridayToSunday,
-      daily: reportData.dailyFestivalFridayToSunday,
-    }, */
     {
       name: 'Festival Tickets (Thursday)',
       total: reportData.festivalThursdayCount,
       daily: reportData.dailyFestivalThursdayCount,
-      capacity: 700,
+      capacity: Math.max(700, reportData.festivalThursdayCount),
     },
     {
       name: 'Festival Tickets (Fri-Sun, etc.)',
       total: reportData.festivalFridayToSunday,
       daily: reportData.dailyFestivalFridayToSunday,
-      capacity: 1500,
+      capacity: Math.max(1500, reportData.festivalFridayToSunday),
     },
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
 
@@ -250,11 +296,20 @@ async function sendReportToSlack(reportData) {
     return item.capacity ? ` / ${item.capacity}` : '';
   };
 
+  // Add strikeout and checkmark if sold out
+  const formatTotal = (item) => {
+    if (item.capacity && item.total >= item.capacity) {
+      return `${item.total} :white_check_mark:`;
+    }
+    return `${item.total}`;
+  };
+
   const allTimeText = sortedItems
-    .map((item) => `• *${item.name}:* ${item.total}${addCapacity(item)}`)
+    .map((item) => `• *${item.name}:* ${addCapacity(item)}${formatTotal(item)}`)
     .join('\n');
 
   const dailyText = sortedItems
+    .filter((item) => item.daily > 0) // Only include items with daily count > 0
     .map((item) => `• *${item.name}:* ${item.daily}`)
     .join('\n');
 
@@ -326,12 +381,16 @@ async function main() {
 
   // 1. Fetch from TicketCo
   const reportData = await fetchTicketCoData();
+
   console.log('TicketCo data fetched:', reportData);
 
   // 2. (Optional) Save the all-time totals to MongoDB
   const logEntry = new TicketSaleLog({
     herbalWalkCount: reportData.herbalWalkCount,
     parkingCount: reportData.parkingCount,
+    wineTasting: reportData.wineTasting,
+    activityIntention: reportData.activityIntention,
+    forestDinner: reportData.forestDinner,
     saunaCount: reportData.saunaCount,
     transportationBusCount: reportData.transportationBusCount,
     merchCount: reportData.merchCount,
