@@ -292,20 +292,16 @@ async function sendReportToSlack(reportData) {
     },
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
 
-  const addCapacity = (item) => {
-    return item.capacity ? ` / ${item.capacity}` : '';
-  };
-
   // Add strikeout and checkmark if sold out
   const formatTotal = (item) => {
     if (item.capacity && item.total >= item.capacity) {
-      return `${item.total} :white_check_mark:`;
+      return `:white_check_mark: ${item.total}`;
     }
     return `${item.total}`;
   };
 
   const allTimeText = sortedItems
-    .map((item) => `• *${item.name}:* ${addCapacity(item)}${formatTotal(item)}`)
+    .map((item) => `• *${item.name}:*  ${formatTotal(item)} / ${item.capacity}`)
     .join('\n');
 
   const dailyText = sortedItems
