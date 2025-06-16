@@ -24,7 +24,8 @@ const ticketSaleSchema = new mongoose.Schema({
   forestDinner: Number,
   saunaCount: Number,
   transportationBusCount: Number,
-  merchCount: Number,
+  cupCount: Number,
+  bottleCount: Number,
   glampingCount: Number,
   festivalThursdayCount: Number,
   festivalFridayToSunday: Number,
@@ -50,7 +51,8 @@ async function fetchTicketCoData() {
   let forestDinner = 0;
   let saunaCount = 0;
   let transportationBusCount = 0;
-  let merchCount = 0;
+  let bottleCount = 0;
+  let cupCount = 0;
   let glampingCount = 0;
   //let festivalSupporterCount = 0;
   let festivalThursdayCount = 0;
@@ -64,7 +66,8 @@ async function fetchTicketCoData() {
   let dailyForestDinner = 0;
   let dailySaunaCount = 0;
   let dailyTransportationBusCount = 0;
-  let dailyMerchCount = 0;
+  let dailyBottleCount = 0;
+  let dailyCupCount = 0;
   let dailyGlampingCount = 0;
   //let dailyFestivalSupporterCount = 0;
   let dailyFestivalThursdayCount = 0;
@@ -104,6 +107,8 @@ async function fetchTicketCoData() {
 
     itemGrosses.forEach((item) => {
       const capacityName = item.capacity_name || '';
+      const itemTypeTitle = item.item_type_title || '';
+
       const itemTypeId = item.item_type_id;
       const transactionDate = new Date(item.transaction_datestamp);
 
@@ -146,9 +151,17 @@ async function fetchTicketCoData() {
           dailyTransportationBusCount++;
         }
       } else if (capacityName === 'Merch') {
-        merchCount++;
-        if (transactionDate >= oneDayAgo) {
-          dailyMerchCount++;
+        if (itemTypeTitle.includes('Monument Stainless Steel Bottle')) {
+          bottleCount++;
+          if (transactionDate >= oneDayAgo) {
+            dailyBottleCount++;
+          }
+        }
+        if (itemTypeTitle.includes('Monument Stainless Steel Cup')) {
+          cupCount++;
+          if (transactionDate >= oneDayAgo) {
+            dailyCupCount++;
+          }
         }
       } else if (capacityName === 'Glamping & Sleeping options') {
         glampingCount++;
@@ -192,7 +205,8 @@ async function fetchTicketCoData() {
     forestDinner,
     saunaCount,
     transportationBusCount,
-    merchCount,
+    cupCount,
+    bottleCount,
     glampingCount,
     //festivalSupporterCount,
     festivalThursdayCount,
@@ -205,7 +219,8 @@ async function fetchTicketCoData() {
     dailyForestDinner,
     dailySaunaCount,
     dailyTransportationBusCount,
-    dailyMerchCount,
+    dailyCupCount,
+    dailyBottleCount,
     dailyGlampingCount,
     //dailyFestivalSupporterCount,
     dailyFestivalThursdayCount,
@@ -267,10 +282,16 @@ async function sendReportToSlack(reportData) {
       capacity: Math.max(2000, reportData.transportationBusCount),
     },
     {
-      name: 'Merch',
-      total: reportData.merchCount,
-      daily: reportData.dailyMerchCount,
-      capacity: Math.max(1000, reportData.merchCount),
+      name: 'Stainless Steel Bottle',
+      total: reportData.bottleCount,
+      daily: reportData.dailyBottleCount,
+      capacity: Math.max(1000, reportData.bottleCount),
+    },
+    {
+      name: 'Stainless Steel Cup',
+      total: reportData.cupCount,
+      daily: reportData.dailyCupCount,
+      capacity: Math.max(1000, reportData.cupCount),
     },
     {
       name: 'Glamping & Sleeping',
@@ -291,17 +312,25 @@ async function sendReportToSlack(reportData) {
       capacity: Math.max(1500, reportData.festivalFridayToSunday),
     },
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
-
-  // Add strikeout and checkmark if sold out
-  const formatTotal = (item) => {
-    if (item.capacity && item.total >= item.capacity) {
-      return `:white_check_mark: ${item.total}`;
+  sortedItems.forEach((item) => {
+    if (!item.total) {
+      console.log(item);
     }
-    return `${item.total}`;
-  };
+  });
 
-  const allTimeText = sortedItems
-    .map((item) => `• *${item.name}:*  ${formatTotal(item)} / ${item.capacity}`)
+  const availableItems = sortedItems.filter(
+    (item) => item.total < item.capacity
+  );
+  const soldOutItems = sortedItems.filter(
+    (item) => item.total >= item.capacity
+  );
+
+  const availableText = availableItems
+    .map((item) => `• *${item.name}:*  ${item.total} / ${item.capacity}`)
+    .join('\n');
+
+  const soldOutText = soldOutItems
+    .map((item) => `• *${item.name}:*  ${item.total} / ${item.capacity}`)
     .join('\n');
 
   const dailyText = sortedItems
@@ -323,34 +352,21 @@ async function sendReportToSlack(reportData) {
       blocksHeader,
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: `*All-Time Totals*\n${allTimeText}` },
-      },
-      { type: 'divider' },
-      {
-        type: 'section',
         text: { type: 'mrkdwn', text: `*Last 24 Hours*\n${dailyText}` },
       },
-    ],
-  };
-
-  const blocksPayloadFamilyChat = {
-    blocks: [
-      blocksHeader,
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text:
-            `:love_letter: *This week's report*:\n` +
-            sortedItems.find(
-              (item) => item.name === 'Festival Tickets (Thursday)'
-            ).total +
-            ' tickets sold for Thursday\n' +
-            sortedItems.find(
-              (item) => item.name === 'Festival Tickets (Fri-Sun, etc.)'
-            ).total +
-            ' tickets sold for Friday to Sunday\n\n' +
-            '\nWant to see more details? Check out the full report in the #ticketsale-notifications channel.',
+          text: `*All-Time Totals (Still Available)*\n${availableText}`,
+        },
+      },
+      { type: 'divider' },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*All-Time Totals (Sold Out)* :white_check_mark: \n${soldOutText}`,
         },
       },
     ],
@@ -389,12 +405,13 @@ async function main() {
     forestDinner: reportData.forestDinner,
     saunaCount: reportData.saunaCount,
     transportationBusCount: reportData.transportationBusCount,
-    merchCount: reportData.merchCount,
+    cupCount: reportData.cupCount,
+    bottleCount: reportData.bottleCount,
     glampingCount: reportData.glampingCount,
     festivalThursdayCount: reportData.festivalThursdayCount,
     festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
-  await logEntry.save();
+  // await logEntry.save();
   console.log('All-time data saved to MongoDB.');
 
   // 3. Send Slack report (with 2 sections: total & last 24 hours)
