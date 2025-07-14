@@ -19,6 +19,7 @@ const ticketSaleSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   herbalWalkCount: Number,
   parkingCount: Number,
+  parkingCount2: Number,
   wineTasting: Number,
   activityIntention: Number,
   forestDinner: Number,
@@ -46,6 +47,7 @@ async function fetchTicketCoData() {
   // We'll accumulate results for each capacity (ALL-TIME)
   let herbalWalkCount = 0;
   let parkingCount = 0;
+  let parkingCount2 = 0;
   let wineTasting = 0;
   let activityIntention = 0;
   let forestDinner = 0;
@@ -61,6 +63,7 @@ async function fetchTicketCoData() {
   // We'll also track the same counts, but only for the LAST 24 HOURS
   let dailyHerbalWalkCount = 0;
   let dailyParkingCount = 0;
+  let dailyParkingCount2 = 0;
   let dailyWineTasting = 0;
   let dailyActivityIntention = 0;
   let dailyForestDinner = 0;
@@ -120,10 +123,15 @@ async function fetchTicketCoData() {
         if (transactionDate >= oneDayAgo) {
           dailyHerbalWalkCount++;
         }
-      } else if (capacityName === 'Parking') {
+      } else if (itemTypeTitle === 'Car Parking') {
         parkingCount++;
         if (transactionDate >= oneDayAgo) {
           dailyParkingCount++;
+        }
+      } else if (itemTypeTitle === 'Car Parking 2') {
+        parkingCount2++;
+        if (transactionDate >= oneDayAgo) {
+          dailyParkingCount2++;
         }
       } else if (capacityName === 'Natural wine tasting') {
         wineTasting++;
@@ -202,6 +210,7 @@ async function fetchTicketCoData() {
     // All-time
     herbalWalkCount,
     parkingCount,
+    parkingCount2,
     wineTasting,
     activityIntention,
     forestDinner,
@@ -216,6 +225,7 @@ async function fetchTicketCoData() {
     // Last 24 hours
     dailyHerbalWalkCount,
     dailyParkingCount,
+    dailyParkingCount2,
     dailyWineTasting,
     dailyActivityIntention,
     dailyForestDinner,
@@ -248,10 +258,16 @@ async function sendReportToSlack(reportData) {
       capacity: Math.max(61, reportData.herbalWalkCount),
     },
     {
-      name: 'Parking',
+      name: 'Car Parking',
       total: reportData.parkingCount,
       daily: reportData.dailyParkingCount,
-      capacity: Math.max(548, reportData.parkingCount),
+      capacity: Math.max(300, reportData.parkingCount),
+    },
+    {
+      name: 'Car Parking 2',
+      total: reportData.parkingCount2,
+      daily: reportData.dailyParkingCount2,
+      capacity: Math.max(82, reportData.parkingCount2),
     },
     {
       name: 'Natural wine tasting',
@@ -396,12 +412,11 @@ async function main() {
   // 1. Fetch from TicketCo
   const reportData = await fetchTicketCoData();
 
-  console.log('TicketCo data fetched:', reportData);
-
   // 2. (Optional) Save the all-time totals to MongoDB
   const logEntry = new TicketSaleLog({
     herbalWalkCount: reportData.herbalWalkCount,
     parkingCount: reportData.parkingCount,
+    parkingCount2: reportData.parkingCount2,
     wineTasting: reportData.wineTasting,
     activityIntention: reportData.activityIntention,
     forestDinner: reportData.forestDinner,
@@ -413,7 +428,7 @@ async function main() {
     festivalThursdayCount: reportData.festivalThursdayCount,
     festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
-  // await logEntry.save();
+  await logEntry.save();
   console.log('All-time data saved to MongoDB.');
 
   // 3. Send Slack report (with 2 sections: total & last 24 hours)
