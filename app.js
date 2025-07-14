@@ -113,7 +113,9 @@ async function fetchTicketCoData() {
       const transactionDate = new Date(item.transaction_datestamp);
 
       // ALL TIME counters
-      if (capacityName === 'Herbal walk and wild forest tea workshop') {
+      if (
+        capacityName === 'Herbal walk and wild forest tea workshop (SOLD OUT)'
+      ) {
         herbalWalkCount++;
         if (transactionDate >= oneDayAgo) {
           dailyHerbalWalkCount++;
@@ -249,7 +251,7 @@ async function sendReportToSlack(reportData) {
       name: 'Parking',
       total: reportData.parkingCount,
       daily: reportData.dailyParkingCount,
-      capacity: Math.max(500, reportData.parkingCount),
+      capacity: Math.max(548, reportData.parkingCount),
     },
     {
       name: 'Natural wine tasting',
