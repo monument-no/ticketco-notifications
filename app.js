@@ -267,7 +267,7 @@ async function sendReportToSlack(reportData) {
       name: 'Car Parking 2',
       total: reportData.parkingCount2,
       daily: reportData.dailyParkingCount2,
-      capacity: Math.max(82, reportData.parkingCount2),
+      capacity: Math.max(80, reportData.parkingCount2),
     },
     {
       name: 'Natural wine tasting',
@@ -291,7 +291,7 @@ async function sendReportToSlack(reportData) {
       name: 'Sauna',
       total: reportData.saunaCount,
       daily: reportData.dailySaunaCount,
-      capacity: Math.max(450, reportData.saunaCount),
+      capacity: Math.max(422, reportData.saunaCount),
     },
     {
       name: 'Transportation (Bus)',
