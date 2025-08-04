@@ -17,17 +17,9 @@ async function connectToMongoDB() {
 // Example Mongoose Schema/Model if you want to store logs or daily stats
 const ticketSaleSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
-  herbalWalkCount: Number,
   parkingCount: Number,
   parkingCount2: Number,
-  wineTasting: Number,
-  activityIntention: Number,
-  forestDinner: Number,
-  saunaCount: Number,
   transportationBusCount: Number,
-  cupCount: Number,
-  bottleCount: Number,
-  glampingCount: Number,
   festivalThursdayCount: Number,
   festivalFridayToSunday: Number,
 });
@@ -41,37 +33,21 @@ async function fetchTicketCoData() {
   const token = process.env.TICKETCO_API_KEY;
   const endpoint = 'https://ticketco.events/api/public/v1/item_grosses';
 
-  // This is your event ID for "Monument Festival 2025"
-  const eventId = '668574';
+  // This is your event ID for "Monument Festival 2026"
+  const eventId = '904783';
 
   // We'll accumulate results for each capacity (ALL-TIME)
-  let herbalWalkCount = 0;
   let parkingCount = 0;
   let parkingCount2 = 0;
-  let wineTasting = 0;
-  let activityIntention = 0;
-  let forestDinner = 0;
-  let saunaCount = 0;
   let transportationBusCount = 0;
-  let bottleCount = 0;
-  let cupCount = 0;
-  let glampingCount = 0;
   //let festivalSupporterCount = 0;
   let festivalThursdayCount = 0;
   let festivalFridayToSunday = 0;
 
   // We'll also track the same counts, but only for the LAST 24 HOURS
-  let dailyHerbalWalkCount = 0;
   let dailyParkingCount = 0;
   let dailyParkingCount2 = 0;
-  let dailyWineTasting = 0;
-  let dailyActivityIntention = 0;
-  let dailyForestDinner = 0;
-  let dailySaunaCount = 0;
   let dailyTransportationBusCount = 0;
-  let dailyBottleCount = 0;
-  let dailyCupCount = 0;
-  let dailyGlampingCount = 0;
   //let dailyFestivalSupporterCount = 0;
   let dailyFestivalThursdayCount = 0;
   let dailyFestivalFridayToSunday = 0;
@@ -83,13 +59,22 @@ async function fetchTicketCoData() {
   let page = 1;
 
   const supporterItemTypeId = [
-    19545429, // Supporter Festival Ticket (Friday-Sunday)
+    23338731, // Supporter Festival Ticket (Friday-Sunday)
   ];
-  const thursdayItemTypeIds = [19545460, 19545506];
+  const thursdayItemTypeIds = [23338732];
   const fridayToSundayItemTypeIds = [
-    20610868, // Regular Festival Ticket (Friday-Sunday)
-    19545505, // Regular Festival Ticket (Friday-Sunday) - Community price
-    // 19545401, // Weekend Friendly Ticket (Fri-Sun)
+    23338609, // Regular Festival Ticket (Friday-Sunday)
+    23338733, // Regular Festival Ticket (Friday-Sunday) - Community price
+    // 23338580, // Weekend Friendly Ticket (Fri-Sun)
+  ];
+
+  const carParkingItemTypeIds = [23338718, 23338710];
+  const busTransportationItemTypeIds = [
+    23338619, 23338577, 23338583, 23338711, 23338734, 23338726, 23338714,
+    23338615, 23338612, 23338614, 23338628, 23338593, 23338603, 23338632,
+    23338717, 23338722, 23338723, 23338728, 23338629, 23338616, 23338617,
+    23338620, 23338621, 23338596, 23338597, 23338598, 23338599, 23338601,
+    23338602, 23338633, 23338719, 23338724, 23338727, 23338729, 23338730,
   ];
 
   while (true) {
@@ -111,90 +96,30 @@ async function fetchTicketCoData() {
     itemGrosses.forEach((item) => {
       const capacityName = item.capacity_name || '';
       const itemTypeTitle = item.item_type_title || '';
-
       const itemTypeId = item.item_type_id;
+
       const transactionDate = new Date(item.transaction_datestamp);
 
       // ALL TIME counters
-      if (
-        capacityName === 'Herbal walk and wild forest tea workshop (SOLD OUT)'
-      ) {
-        herbalWalkCount++;
-        if (transactionDate >= oneDayAgo) {
-          dailyHerbalWalkCount++;
-        }
-      } else if (itemTypeTitle === 'Car Parking') {
+      if (carParkingItemTypeIds.includes(itemTypeId)) {
         parkingCount++;
         if (transactionDate >= oneDayAgo) {
           dailyParkingCount++;
         }
-      } else if (itemTypeTitle === 'Car Parking 2') {
-        parkingCount2++;
-        if (transactionDate >= oneDayAgo) {
-          dailyParkingCount2++;
-        }
-      } else if (capacityName === 'Natural wine tasting') {
-        wineTasting++;
-        if (transactionDate >= oneDayAgo) {
-          dailyWineTasting++;
-        }
-      } else if (
-        capacityName === 'Activity: Start Your Day With Intention (Free)'
-      ) {
-        activityIntention++;
-        if (transactionDate >= oneDayAgo) {
-          dailyActivityIntention++;
-        }
-      } else if (capacityName === 'To Sense: 8-Course Forest Dinner') {
-        forestDinner++;
-        if (transactionDate >= oneDayAgo) {
-          dailyForestDinner++;
-        }
-      } else if (capacityName === 'Sauna') {
-        saunaCount++;
-        if (transactionDate >= oneDayAgo) {
-          dailySaunaCount++;
-        }
-      } else if (capacityName === 'Transportation: Bus') {
+      } else if (busTransportationItemTypeIds.includes(itemTypeId)) {
         transportationBusCount++;
         if (transactionDate >= oneDayAgo) {
           dailyTransportationBusCount++;
         }
-      } else if (capacityName === 'Merch') {
-        if (itemTypeTitle.includes('Monument Stainless Steel Bottle')) {
-          bottleCount++;
-          if (transactionDate >= oneDayAgo) {
-            dailyBottleCount++;
-          }
-        }
-        if (itemTypeTitle.includes('Monument Stainless Steel Cup')) {
-          cupCount++;
-          if (transactionDate >= oneDayAgo) {
-            dailyCupCount++;
-          }
-        }
-      } else if (capacityName === 'Glamping & Sleeping options') {
-        glampingCount++;
+      } else if (thursdayItemTypeIds.includes(itemTypeId)) {
+        festivalThursdayCount++;
         if (transactionDate >= oneDayAgo) {
-          dailyGlampingCount++;
+          dailyFestivalThursdayCount++;
         }
-      } else if (capacityName === 'Festival Tickets') {
-        /* if (supporterItemTypeId.includes(itemTypeId)) {
-          festivalSupporterCount++;
-          if (transactionDate >= oneDayAgo) {
-            //dailyFestivalSupporterCount++;
-          }
-        } */
-        if (thursdayItemTypeIds.includes(itemTypeId)) {
-          festivalThursdayCount++;
-          if (transactionDate >= oneDayAgo) {
-            dailyFestivalThursdayCount++;
-          }
-        } else if (fridayToSundayItemTypeIds.includes(itemTypeId)) {
-          festivalFridayToSunday++;
-          if (transactionDate >= oneDayAgo) {
-            dailyFestivalFridayToSunday++;
-          }
+      } else if (fridayToSundayItemTypeIds.includes(itemTypeId)) {
+        festivalFridayToSunday++;
+        if (transactionDate >= oneDayAgo) {
+          dailyFestivalFridayToSunday++;
         }
       }
     });
@@ -208,32 +133,15 @@ async function fetchTicketCoData() {
 
   return {
     // All-time
-    herbalWalkCount,
+
     parkingCount,
-    parkingCount2,
-    wineTasting,
-    activityIntention,
-    forestDinner,
-    saunaCount,
     transportationBusCount,
-    cupCount,
-    bottleCount,
-    glampingCount,
     //festivalSupporterCount,
     festivalThursdayCount,
     festivalFridayToSunday,
     // Last 24 hours
-    dailyHerbalWalkCount,
     dailyParkingCount,
-    dailyParkingCount2,
-    dailyWineTasting,
-    dailyActivityIntention,
-    dailyForestDinner,
-    dailySaunaCount,
     dailyTransportationBusCount,
-    dailyCupCount,
-    dailyBottleCount,
-    dailyGlampingCount,
     //dailyFestivalSupporterCount,
     dailyFestivalThursdayCount,
     dailyFestivalFridayToSunday,
@@ -252,70 +160,16 @@ async function sendReportToSlack(reportData) {
   // Filter out items with total 0 before sorting and reporting
   const sortedItems = [
     {
-      name: 'Herbal walk & wild forest tea workshop',
-      total: reportData.herbalWalkCount,
-      daily: reportData.dailyHerbalWalkCount,
-      capacity: Math.max(61, reportData.herbalWalkCount),
-    },
-    {
       name: 'Car Parking',
       total: reportData.parkingCount,
       daily: reportData.dailyParkingCount,
-      capacity: Math.max(300, reportData.parkingCount),
-    },
-    {
-      name: 'Car Parking 2',
-      total: reportData.parkingCount2,
-      daily: reportData.dailyParkingCount2,
-      capacity: Math.max(80, reportData.parkingCount2),
-    },
-    {
-      name: 'Natural wine tasting',
-      total: reportData.wineTasting,
-      daily: reportData.dailyWineTasting,
-      capacity: Math.max(60, reportData.wineTasting),
-    },
-    {
-      name: 'Activity: Start Your Day With Intention (Free)',
-      total: reportData.activityIntention,
-      daily: reportData.dailyActivityIntention,
-      capacity: Math.max(24, reportData.activityIntention),
-    },
-    {
-      name: 'To Sense: 8-Course Forest Dinner',
-      total: reportData.forestDinner,
-      daily: reportData.dailyForestDinner,
-      capacity: Math.max(80, reportData.forestDinner),
-    },
-    {
-      name: 'Sauna',
-      total: reportData.saunaCount,
-      daily: reportData.dailySaunaCount,
-      capacity: Math.max(422, reportData.saunaCount),
+      capacity: Math.max(360, reportData.parkingCount),
     },
     {
       name: 'Transportation (Bus)',
       total: reportData.transportationBusCount,
       daily: reportData.dailyTransportationBusCount,
       capacity: Math.max(2000, reportData.transportationBusCount),
-    },
-    {
-      name: 'Stainless Steel Bottle',
-      total: reportData.bottleCount,
-      daily: reportData.dailyBottleCount,
-      capacity: Math.max(1000, reportData.bottleCount),
-    },
-    {
-      name: 'Stainless Steel Cup',
-      total: reportData.cupCount,
-      daily: reportData.dailyCupCount,
-      capacity: Math.max(1000, reportData.cupCount),
-    },
-    {
-      name: 'Glamping & Sleeping',
-      total: reportData.glampingCount,
-      daily: reportData.dailyGlampingCount,
-      capacity: Math.max(80, reportData.glampingCount),
     },
     {
       name: 'Festival Tickets (Thursday)',
@@ -360,7 +214,7 @@ async function sendReportToSlack(reportData) {
     type: 'header',
     text: {
       type: 'plain_text',
-      text: 'Monument Festival 2025 - Ticket Summary',
+      text: 'Monument Festival 2026 - Ticket Summary',
       emoji: true,
     },
   };
@@ -414,17 +268,9 @@ async function main() {
 
   // 2. (Optional) Save the all-time totals to MongoDB
   const logEntry = new TicketSaleLog({
-    herbalWalkCount: reportData.herbalWalkCount,
     parkingCount: reportData.parkingCount,
     parkingCount2: reportData.parkingCount2,
-    wineTasting: reportData.wineTasting,
-    activityIntention: reportData.activityIntention,
-    forestDinner: reportData.forestDinner,
-    saunaCount: reportData.saunaCount,
     transportationBusCount: reportData.transportationBusCount,
-    cupCount: reportData.cupCount,
-    bottleCount: reportData.bottleCount,
-    glampingCount: reportData.glampingCount,
     festivalThursdayCount: reportData.festivalThursdayCount,
     festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
