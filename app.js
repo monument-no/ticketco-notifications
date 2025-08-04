@@ -219,6 +219,19 @@ async function sendReportToSlack(reportData) {
     },
   };
 
+  const soldOutBlocks =
+    soldOutItems.length > 0
+      ? [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*All-Time Totals (Sold Out)* :white_check_mark: \n${soldOutText}`,
+            },
+          },
+        ]
+      : [];
+
   const blocksPayload = {
     blocks: [
       blocksHeader,
@@ -234,13 +247,7 @@ async function sendReportToSlack(reportData) {
         },
       },
       { type: 'divider' },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*All-Time Totals (Sold Out)* :white_check_mark: \n${soldOutText}`,
-        },
-      },
+      ...soldOutBlocks,
     ],
   };
 
