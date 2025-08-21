@@ -116,7 +116,10 @@ async function fetchTicketCoData() {
         if (transactionDate >= oneDayAgo) {
           dailyFestivalThursdayCount++;
         }
-      } else if (fridayToSundayItemTypeIds.includes(itemTypeId)) {
+      } else if (
+        fridayToSundayItemTypeIds.includes(itemTypeId) ||
+        supporterItemTypeId.includes(itemTypeId)
+      ) {
         festivalFridayToSunday++;
         if (transactionDate >= oneDayAgo) {
           dailyFestivalFridayToSunday++;
@@ -181,7 +184,7 @@ async function sendReportToSlack(reportData) {
       name: 'Festival Tickets (Fri-Sun, etc.)',
       total: reportData.festivalFridayToSunday,
       daily: reportData.dailyFestivalFridayToSunday,
-      capacity: Math.max(1500, reportData.festivalFridayToSunday),
+      capacity: Math.max(1854, reportData.festivalFridayToSunday),
     },
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
   sortedItems.forEach((item) => {
