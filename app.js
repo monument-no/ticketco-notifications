@@ -40,15 +40,18 @@ async function fetchTicketCoData() {
   let parkingCount = 0;
   let parkingCount2 = 0;
   let transportationBusCount = 0;
-  //let festivalSupporterCount = 0;
+  let festivalSupporterCount = 0;
   let festivalThursdayCount = 0;
   let festivalFridayToSunday = 0;
+
+  let womenAndNonBinaryCount = 0;
+  let dailyWomenAndNonBinaryCount = 0;
 
   // We'll also track the same counts, but only for the LAST 24 HOURS
   let dailyParkingCount = 0;
   let dailyParkingCount2 = 0;
   let dailyTransportationBusCount = 0;
-  //let dailyFestivalSupporterCount = 0;
+  let dailyFestivalSupporterCount = 0;
   let dailyFestivalThursdayCount = 0;
   let dailyFestivalFridayToSunday = 0;
 
@@ -65,8 +68,14 @@ async function fetchTicketCoData() {
   const fridayToSundayItemTypeIds = [
     23338609, // Regular Festival Ticket (Friday-Sunday)
     23338733, // Regular Festival Ticket (Friday-Sunday) - Community price
+    
     // 23338580, // Weekend Friendly Ticket (Fri-Sun)
+
   ];
+
+  const womenAndNonBinaryItemTypeIds = [
+    23875945 // Women and non-binary
+  ]
 
   const carParkingItemTypeIds = [23338718, 23338710];
   const busTransportationItemTypeIds = [
@@ -76,6 +85,8 @@ async function fetchTicketCoData() {
     23338620, 23338621, 23338596, 23338597, 23338598, 23338599, 23338601,
     23338602, 23338633, 23338719, 23338724, 23338727, 23338729, 23338730,
   ];
+  
+  
 
   while (true) {
     const url = new URL(endpoint);
@@ -97,6 +108,8 @@ async function fetchTicketCoData() {
       const capacityName = item.capacity_name || '';
       const itemTypeTitle = item.item_type_title || '';
       const itemTypeId = item.item_type_id;
+      
+      
 
       const transactionDate = new Date(item.transaction_datestamp);
 
@@ -117,12 +130,22 @@ async function fetchTicketCoData() {
           dailyFestivalThursdayCount++;
         }
       } else if (
-        fridayToSundayItemTypeIds.includes(itemTypeId) ||
-        supporterItemTypeId.includes(itemTypeId)
+        fridayToSundayItemTypeIds.includes(itemTypeId) 
       ) {
         festivalFridayToSunday++;
         if (transactionDate >= oneDayAgo) {
           dailyFestivalFridayToSunday++;
+        }
+      } else if (supporterItemTypeId.includes(itemTypeId)) {
+        festivalSupporterCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyFestivalSupporterCount++;
+        }
+      
+      } else if (womenAndNonBinaryItemTypeIds.includes(itemTypeId)) {
+        womenAndNonBinaryCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyWomenAndNonBinaryCount++;
         }
       }
     });
@@ -133,19 +156,22 @@ async function fetchTicketCoData() {
       break;
     }
   }
+  
+  
 
   return {
     // All-time
-
     parkingCount,
     transportationBusCount,
-    //festivalSupporterCount,
+    womenAndNonBinaryCount,
+    festivalSupporterCount,
     festivalThursdayCount,
     festivalFridayToSunday,
     // Last 24 hours
     dailyParkingCount,
     dailyTransportationBusCount,
-    //dailyFestivalSupporterCount,
+    dailyWomenAndNonBinaryCount,
+    dailyFestivalSupporterCount,
     dailyFestivalThursdayCount,
     dailyFestivalFridayToSunday,
   };
@@ -156,8 +182,7 @@ async function fetchTicketCoData() {
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendReportToSlack(reportData) {
   const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
-  const slackWebhookUrlFamilyChat = process.env.SLACK_WEBHOOK_URL_FAMILY_CHAT;
-  const isFriday = new Date().getDay() === 5;
+  
 
   // Extract values and sort based on total count
   // Filter out items with total 0 before sorting and reporting
@@ -175,16 +200,28 @@ async function sendReportToSlack(reportData) {
       capacity: Math.max(2000, reportData.transportationBusCount),
     },
     {
-      name: 'Festival Tickets (Thursday)',
-      total: reportData.festivalThursdayCount,
-      daily: reportData.dailyFestivalThursdayCount,
-      capacity: Math.max(700, reportData.festivalThursdayCount),
+      name: 'Festival Tickets Women and Non-Binary (Fri-Sun.)',
+      total: reportData.womenAndNonBinaryCount,
+      daily: reportData.dailyWomenAndNonBinaryCount,
+      capacity: Math.max(309, reportData.womenAndNonBinaryCount),
     },
     {
-      name: 'Festival Tickets (Fri-Sun, etc.)',
+      name: 'Festival Tickets Supporter (Fri-Sun.)',
+      total: reportData.festivalSupporterCount,
+      daily: reportData.dailyFestivalSupporterCount,
+      capacity: Math.max(370, reportData.festivalSupporterCount),
+    },
+    {
+      name: 'Festival Tickets (Thu.)',
+      total: reportData.festivalThursdayCount,
+      daily: reportData.dailyFestivalThursdayCount,
+      capacity: Math.max(750, reportData.festivalThursdayCount),
+    },
+    {
+      name: 'Festival Tickets (Fri-Sun.)',
       total: reportData.festivalFridayToSunday,
       daily: reportData.dailyFestivalFridayToSunday,
-      capacity: Math.max(1854, reportData.festivalFridayToSunday),
+      capacity: Math.max(1300, reportData.festivalFridayToSunday),
     },
   ].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
   sortedItems.forEach((item) => {
@@ -256,10 +293,6 @@ async function sendReportToSlack(reportData) {
 
   try {
     await axios.post(slackWebhookUrl, blocksPayload);
-    // Temp removed for now
-    /* if (isFriday) {
-      await axios.post(slackWebhookUrlFamilyChat, blocksPayloadFamilyChat);
-    } */
     console.log('Report successfully sent to Slack with sorted blocks.');
   } catch (error) {
     console.error('Error sending report to Slack:', error.message);
@@ -275,12 +308,14 @@ async function main() {
 
   // 1. Fetch from TicketCo
   const reportData = await fetchTicketCoData();
+  
 
   // 2. (Optional) Save the all-time totals to MongoDB
   const logEntry = new TicketSaleLog({
     parkingCount: reportData.parkingCount,
     parkingCount2: reportData.parkingCount2,
     transportationBusCount: reportData.transportationBusCount,
+    womenAndNonBinaryCount: reportData.womenAndNonBinaryCount,
     festivalThursdayCount: reportData.festivalThursdayCount,
     festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
