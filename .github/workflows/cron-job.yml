@@ -2,8 +2,8 @@ name: 'Daily Ticket Report'
 
 on:
   schedule:
-    # Runs every day at 03:55 UTC
-    - cron: '55 3 * * *'
+    # Runs every day at 04:55 UTC
+    - cron: '55 4 * * *'
 
 jobs:
   daily-report:
