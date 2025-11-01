@@ -19,6 +19,7 @@ const ticketSaleSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   parkingCount: Number,
   parkingCount2: Number,
+  glampingCount: Number,
   transportationBusCount: Number,
   festivalThursdayCount: Number,
   festivalFridayToSunday: Number,
@@ -39,6 +40,7 @@ async function fetchTicketCoData() {
   // We'll accumulate results for each capacity (ALL-TIME)
   let parkingCount = 0;
   let parkingCount2 = 0;
+  let glampingCount = 0;
   let transportationBusCount = 0;
   let festivalSupporterCount = 0;
   let festivalThursdayCount = 0;
@@ -50,6 +52,7 @@ async function fetchTicketCoData() {
   // We'll also track the same counts, but only for the LAST 24 HOURS
   let dailyParkingCount = 0;
   let dailyParkingCount2 = 0;
+  let dailyGlampingCount = 0;
   let dailyTransportationBusCount = 0;
   let dailyFestivalSupporterCount = 0;
   let dailyFestivalThursdayCount = 0;
@@ -85,6 +88,11 @@ async function fetchTicketCoData() {
     23338620, 23338621, 23338596, 23338597, 23338598, 23338599, 23338601,
     23338602, 23338633, 23338719, 23338724, 23338727, 23338729, 23338730,
   ];
+
+  const glampingItemTypeIds = [
+    23338604,23338703,23338713,23338712,23338702
+  ]
+  
   
   
 
@@ -103,11 +111,13 @@ async function fetchTicketCoData() {
     if (!itemGrosses.length) {
       break;
     }
+    
 
     itemGrosses.forEach((item) => {
       const capacityName = item.capacity_name || '';
       const itemTypeTitle = item.item_type_title || '';
       const itemTypeId = item.item_type_id;
+
       
       
 
@@ -118,6 +128,11 @@ async function fetchTicketCoData() {
         parkingCount++;
         if (transactionDate >= oneDayAgo) {
           dailyParkingCount++;
+        }
+      } else if (glampingItemTypeIds.includes(itemTypeId)) {
+        glampingCount++;
+        if (transactionDate >= oneDayAgo) {
+          dailyGlampingCount++;
         }
       } else if (busTransportationItemTypeIds.includes(itemTypeId)) {
         transportationBusCount++;
@@ -162,6 +177,7 @@ async function fetchTicketCoData() {
   return {
     // All-time
     parkingCount,
+    glampingCount,
     transportationBusCount,
     womenAndNonBinaryCount,
     festivalSupporterCount,
@@ -169,6 +185,7 @@ async function fetchTicketCoData() {
     festivalFridayToSunday,
     // Last 24 hours
     dailyParkingCount,
+    dailyGlampingCount,
     dailyTransportationBusCount,
     dailyWomenAndNonBinaryCount,
     dailyFestivalSupporterCount,
@@ -192,6 +209,12 @@ async function sendReportToSlack(reportData) {
       total: reportData.parkingCount,
       daily: reportData.dailyParkingCount,
       capacity: Math.max(360, reportData.parkingCount),
+    },
+    {
+      name: 'Glamping',
+      total: reportData.glampingCount,
+      daily: reportData.dailyGlampingCount,
+      capacity: Math.max(78, reportData.glampingCount),
     },
     {
       name: 'Transportation (Bus)',
@@ -313,12 +336,15 @@ async function main() {
   // 2. (Optional) Save the all-time totals to MongoDB
   const logEntry = new TicketSaleLog({
     parkingCount: reportData.parkingCount,
-    parkingCount2: reportData.parkingCount2,
+    glampingCount: reportData.glampingCount,
     transportationBusCount: reportData.transportationBusCount,
     womenAndNonBinaryCount: reportData.womenAndNonBinaryCount,
     festivalThursdayCount: reportData.festivalThursdayCount,
     festivalFridayToSunday: reportData.festivalFridayToSunday,
   });
+  
+  
+
   await logEntry.save();
   console.log('All-time data saved to MongoDB.');
 
