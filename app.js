@@ -49,6 +49,7 @@ async function fetchTicketCoData() {
 	let saunaCount = 0;
 	let womenAndNonBinaryCount = 0;
 	let dailyWomenAndNonBinaryCount = 0;
+	let merchCount = 0;
 
 	// We'll also track the same counts, but only for the LAST 24 HOURS
 	let dailyDinnerCount = 0;
@@ -60,6 +61,7 @@ async function fetchTicketCoData() {
 	let dailyFestivalSupporterCount = 0;
 	let dailyFestivalThursdayCount = 0;
 	let dailyFestivalFridayToSunday = 0;
+	let dailyMerchCount = 0;
 
 	// Determine the cutoff time for "last 24 hours"
 	const now = new Date();
@@ -110,6 +112,8 @@ async function fetchTicketCoData() {
 		23338667, 23338697, 23338670, 23338664, 23338700, 23338650, 23338663,
 		23338636, 23338643, 23338696,
 	];
+
+	const merchItemTypeIds = [23338585, 23338737, 23338578, 23338738];
 
 	while (true) {
 		const url = new URL(endpoint);
@@ -182,6 +186,11 @@ async function fetchTicketCoData() {
 				if (transactionDate >= oneDayAgo) {
 					dailySaunaCount++;
 				}
+			} else if (merchItemTypeIds.includes(itemTypeId)) {
+				merchCount++;
+				if (transactionDate >= oneDayAgo) {
+					dailyMerchCount++;
+				}
 			}
 		});
 
@@ -204,6 +213,7 @@ async function fetchTicketCoData() {
 		dinnerCount,
 		natureWalkCount,
 		saunaCount,
+		merchCount,
 		// Last 24 hours
 		dailyParkingCount,
 		dailyGlampingCount,
@@ -215,6 +225,7 @@ async function fetchTicketCoData() {
 		dailyDinnerCount,
 		dailyNatureWalkCount,
 		dailySaunaCount,
+		dailyMerchCount,
 	};
 }
 
@@ -273,19 +284,25 @@ async function sendReportToSlack(reportData) {
 			name: "Dinner",
 			total: reportData.dinnerCount,
 			daily: reportData.dailyDinnerCount,
-			capacity: Math.max(100, reportData.dinnerCount),
+			capacity: Math.max(93, reportData.dinnerCount),
 		},
 		{
 			name: "Nature Walk",
 			total: reportData.natureWalkCount,
 			daily: reportData.dailyNatureWalkCount,
-			capacity: Math.max(100, reportData.natureWalkCount),
+			capacity: Math.max(90, reportData.natureWalkCount),
 		},
 		{
 			name: "Sauna",
 			total: reportData.saunaCount,
 			daily: reportData.dailySaunaCount,
-			capacity: Math.max(100, reportData.saunaCount),
+			capacity: Math.max(450, reportData.saunaCount),
+		},
+		{
+			name: "Merch",
+			total: reportData.merchCount,
+			daily: reportData.dailyMerchCount,
+			capacity: Math.max(1000, reportData.merchCount),
 		},
 	].sort((a, b) => a.total - b.total); // Sort by total count, lowest to highest
 	sortedItems.forEach((item) => {
