@@ -1,34 +1,8 @@
 require("dotenv").config();
 const axios = require("axios");
-const mongoose = require("mongoose");
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. MongoDB Setup (optional) - define a simple schema/model to store your data
-// ─────────────────────────────────────────────────────────────────────────────
-async function connectToMongoDB() {
-	try {
-		await mongoose.connect(process.env.MONGODB_URI);
-		console.log("MongoDB connected.");
-	} catch (error) {
-		console.error("MongoDB connection error:", error);
-	}
-}
-
-// Example Mongoose Schema/Model if you want to store logs or daily stats
-const ticketSaleSchema = new mongoose.Schema({
-	createdAt: { type: Date, default: Date.now },
-	parkingCount: Number,
-	parkingCount2: Number,
-	glampingCount: Number,
-	transportationBusCount: Number,
-	festivalThursdayCount: Number,
-	festivalFridayToSunday: Number,
-});
-
-const TicketSaleLog = mongoose.model("TicketSaleLog", ticketSaleSchema);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. Fetch data from TicketCo
+// 1. Fetch data from TicketCo
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchTicketCoData() {
 	const token = process.env.TICKETCO_API_KEY;
@@ -230,7 +204,7 @@ async function fetchTicketCoData() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. Send a message to Slack (using Slack Blocks)
+// 2. Send a message to Slack (using Slack Blocks)
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendReportToSlack(reportData) {
 	const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
@@ -381,36 +355,11 @@ async function sendReportToSlack(reportData) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. Main function to orchestrate everything
+// 3. Main function to orchestrate everything
 // ─────────────────────────────────────────────────────────────────────────────
 async function main() {
-	// (Optional) Connect to MongoDB if you want to store your results
-	await connectToMongoDB();
-
-	// 1. Fetch from TicketCo
 	const reportData = await fetchTicketCoData();
-
-	// 2. (Optional) Save the all-time totals to MongoDB
-	const logEntry = new TicketSaleLog({
-		parkingCount: reportData.parkingCount,
-		glampingCount: reportData.glampingCount,
-		transportationBusCount: reportData.transportationBusCount,
-		womenAndNonBinaryCount: reportData.womenAndNonBinaryCount,
-		festivalThursdayCount: reportData.festivalThursdayCount,
-		festivalFridayToSunday: reportData.festivalFridayToSunday,
-		dinnerCount: reportData.dinnerCount,
-		natureWalkCount: reportData.natureWalkCount,
-		saunaCount: reportData.saunaCount,
-	});
-
-	await logEntry.save();
-	console.log("All-time data saved to MongoDB.");
-
-	// 3. Send Slack report (with 2 sections: total & last 24 hours)
 	await sendReportToSlack(reportData);
-
-	// 4. Close MongoDB connection if your script is exiting
-	mongoose.connection.close();
 }
 
 // Run main if this file is called directly
