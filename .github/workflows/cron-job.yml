@@ -4,6 +4,7 @@ on:
   schedule:
     # Runs every day at 04:55 UTC
     - cron: '55 4 * * *'
+  workflow_dispatch:
 
 jobs:
   daily-report:
