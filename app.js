@@ -264,7 +264,7 @@ async function sendReportToSlack(reportData) {
 			name: "Nature Walk",
 			total: reportData.natureWalkCount,
 			daily: reportData.dailyNatureWalkCount,
-			capacity: Math.max(90, reportData.natureWalkCount),
+			capacity: Math.max(76, reportData.natureWalkCount),
 		},
 		{
 			name: "Sauna",
