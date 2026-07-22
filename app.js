@@ -216,13 +216,13 @@ async function sendReportToSlack(reportData) {
 			name: "Car Parking",
 			total: reportData.parkingCount,
 			daily: reportData.dailyParkingCount,
-			capacity: Math.max(405, reportData.parkingCount),
+			capacity: Math.max(331, reportData.parkingCount),
 		},
 		{
 			name: "Glamping",
 			total: reportData.glampingCount,
 			daily: reportData.dailyGlampingCount,
-			capacity: Math.max(150, reportData.glampingCount),
+			capacity: Math.max(111, reportData.glampingCount),
 		},
 		{
 			name: "Transportation (Bus)",
@@ -270,7 +270,7 @@ async function sendReportToSlack(reportData) {
 			name: "Sauna",
 			total: reportData.saunaCount,
 			daily: reportData.dailySaunaCount,
-			capacity: Math.max(450, reportData.saunaCount),
+			capacity: Math.max(435, reportData.saunaCount),
 		},
 		{
 			name: "Merch",
